@@ -3,7 +3,7 @@ name: dbt Main Deployment
 on:
   push:
     branches:
-      - main   # 👈 trigger only when pushing to main
+      - main
 
 jobs:
   dbt-run:
@@ -19,11 +19,23 @@ jobs:
           python-version: 3.9
 
       - name: Install dbt
+        run: pip install dbt-duckdb
+
+      - name: Create dbt profiles.yml
         run: |
-          pip install dbt-duckdb
+          mkdir -p /home/runner/.dbt
+          echo "dbt_local_project:
+            target: dev
+            outputs:
+              dev:
+                type: duckdb
+                path: dev.duckdb" > /home/runner/.dbt/profiles.yml
 
       - name: Run dbt debug
         run: dbt debug
 
-      - name: Run dbt models
+      - name: Run dbt seed
+        run: dbt seed
+
+      - name: Run dbt run
         run: dbt run

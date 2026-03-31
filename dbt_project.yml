@@ -1,0 +1,19 @@
+name: 'dbt_local_project'
+version: '1.0'
+config-version: 2
+
+profile: 'dbt_local_project'
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+
+models:
+  dbt_local_project:
+    staging:
+      +materialized: view
+    marts:
+      +materialized: table
+
+seeds:
+  dbt_local_project:
+    +schema: raw

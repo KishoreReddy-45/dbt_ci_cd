@@ -1,0 +1,71 @@
+name: dbt Promotion Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - staging
+
+jobs:
+
+# ---------------- DEV VALIDATION ----------------
+  dev-check:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+
+      - name: Install dbt
+        run: pip install dbt-duckdb
+
+      - name: Create DEV profile
+        run: |
+          mkdir -p ~/.dbt
+          echo "dbt_local_project:
+            target: dev
+            outputs:
+              dev:
+                type: duckdb
+                path: dev.duckdb" > ~/.dbt/profiles.yml
+
+      - name: Run dbt (DEV validation)
+        run: dbt build
+
+# ---------------- CREATE PR TO STAGING ----------------
+  promote-to-staging:
+    needs: dev-check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create PR → staging
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: staging
+          branch: main
+          title: "Promote to STAGING"
+          body: "Auto PR after DEV success"
+
+# ---------------- CREATE PR TO PROD ----------------
+  promote-to-prod:
+    if: github.event_name == 'pull_request' && github.base_ref == 'staging'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create PR → prod
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: prod
+          branch: staging
+          title: "Promote to PROD"
+          body: "Auto PR after STAGING success"

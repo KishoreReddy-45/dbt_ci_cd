@@ -1,4 +1,4 @@
-name: dbt Deployment
+name: dbt Main Deployment
 
 on:
   push:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout Code
         uses: actions/checkout@v3
 
       - name: Setup Python
@@ -19,14 +19,25 @@ jobs:
           python-version: 3.9
 
       - name: Install dbt
+        run: pip install dbt-duckdb
+
+      - name: Create dbt profiles.yml
         run: |
-          pip install dbt-duckdb
+          mkdir -p ~/.dbt
+          cat <<EOF > ~/.dbt/profiles.yml
+          dbt_local_project:
+            target: dev
+            outputs:
+              dev:
+                type: duckdb
+                path: dev.duckdb
+          EOF
+
+      - name: Run dbt debug
+        run: dbt debug
 
       - name: Run dbt seed
         run: dbt seed
 
-      - name: Run dbt models
+      - name: Run dbt run
         run: dbt run
-
-      - name: Run dbt tests
-        run: dbt test

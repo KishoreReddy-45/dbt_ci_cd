@@ -1,16 +1,18 @@
-name: dbt Deployment
+name: dbt CI/CD Pipeline
 
 on:
   push:
     branches:
+      - dev
+      - staging
       - main
 
 jobs:
-  dbt-run:
+  dbt-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Setup Python
@@ -19,14 +21,16 @@ jobs:
           python-version: 3.9
 
       - name: Install dbt
-        run: |
-          pip install dbt-duckdb
+        run: pip install dbt-duckdb
 
-      - name: Run dbt seed
-        run: dbt seed
+      - name: Run dbt in DEV
+        if: github.ref == 'refs/heads/dev'
+        run: dbt build --target dev
 
-      - name: Run dbt models
-        run: dbt run
+      - name: Run dbt in STAGING
+        if: github.ref == 'refs/heads/staging'
+        run: dbt build --target staging
 
-      - name: Run dbt tests
-        run: dbt test
+      - name: Run dbt in PROD
+        if: github.ref == 'refs/heads/main'
+        run: dbt build --target prod

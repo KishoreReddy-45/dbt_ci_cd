@@ -3,5 +3,5 @@
 select
     order_id,
     customer_id,
-    amount
+    sum(amount) as amount
 from {{ source('raw', 'order') }}

@@ -11,7 +11,7 @@ on:
 jobs:
 
 # ---------------- DEV VALIDATION ----------------
-  dev-check:
+  dev-validation:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
@@ -37,23 +37,26 @@ jobs:
                 type: duckdb
                 path: dev.duckdb" > ~/.dbt/profiles.yml
 
-      - name: Run dbt (DEV validation)
+      - name: Run dbt build (DEV validation)
         run: dbt build
 
 # ---------------- CREATE PR TO STAGING ----------------
   promote-to-staging:
-    needs: dev-check
+    needs: dev-validation
     runs-on: ubuntu-latest
 
     steps:
-      - name: Create PR → staging
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Create PR to staging
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           base: staging
           branch: main
           title: "Promote to STAGING"
-          body: "Auto PR after DEV success"
+          body: "Auto PR created after DEV validation success"
 
 # ---------------- CREATE PR TO PROD ----------------
   promote-to-prod:
@@ -61,11 +64,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Create PR → prod
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Create PR to prod
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           base: prod
           branch: staging
           title: "Promote to PROD"
-          body: "Auto PR after STAGING success"
+          body: "Auto PR created after STAGING success"

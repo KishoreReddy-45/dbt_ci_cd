@@ -1,17 +1,32 @@
-name: dbt Main Deployment
+name: dbt Deployment
 
 on:
   push:
     branches:
-      - main
+      - dev
+      - staging
+      - prod
 
 jobs:
-  dbt-run:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+
+      - name: Print Branch
+        run: echo "Deploying branch $GITHUB_REF"
+
+      - name: Set Environment Target
+        run: |
+          if [[ $GITHUB_REF == "refs/heads/dev" ]]; then
+            echo "DBT_TARGET=dev" >> $GITHUB_ENV
+          elif [[ $GITHUB_REF == "refs/heads/staging" ]]; then
+            echo "DBT_TARGET=staging" >> $GITHUB_ENV
+          elif [[ $GITHUB_REF == "refs/heads/prod" ]]; then
+            echo "DBT_TARGET=prod" >> $GITHUB_ENV
+          fi
 
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -21,23 +36,27 @@ jobs:
       - name: Install dbt
         run: pip install dbt-duckdb
 
-      - name: Create dbt profiles.yml
+      - name: Create profiles.yml
         run: |
           mkdir -p ~/.dbt
-          cat <<EOF > ~/.dbt/profiles.yml
-          dbt_local_project:
-            target: dev
+          echo "dbt_local_project:
+            target: $DBT_TARGET
             outputs:
               dev:
                 type: duckdb
                 path: dev.duckdb
-          EOF
+              staging:
+                type: duckdb
+                path: staging.duckdb
+              prod:
+                type: duckdb
+                path: prod.duckdb" > ~/.dbt/profiles.yml
 
       - name: Run dbt debug
         run: dbt debug
 
-      - name: Run dbt seed
-        run: dbt seed
+      - name: Run dbt build
+        run: dbt build
 
-      - name: Run dbt run
-        run: dbt run
+      - name: Deployment Completed
+        run: echo "Deployment completed for $DBT_TARGET"
